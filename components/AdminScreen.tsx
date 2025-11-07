@@ -16,6 +16,7 @@ export const AdminScreen: React.FC<{ onSave: () => void; onBackToHome: () => voi
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [responses, setResponses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,13 +29,14 @@ export const AdminScreen: React.FC<{ onSave: () => void; onBackToHome: () => voi
           dataService.getTeachers(),
           dataService.getResponses()
         ]);
-        
+        setFetchError(null);
         setPrimaryQuestions(primary);
         setSecondaryQuestions(secondary);
         setTeachers(teachersList);
         setResponses(responsesList);
       } catch (error) {
         console.error('Error cargando datos:', error);
+        setFetchError((error as Error)?.message || String(error));
       } finally {
         setIsLoading(false);
       }
@@ -113,6 +115,41 @@ export const AdminScreen: React.FC<{ onSave: () => void; onBackToHome: () => voi
           </div>
         ) : (
           <>
+            {fetchError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded">
+                <strong>Error al cargar datos:</strong>
+                <div className="mt-2">{fetchError}</div>
+                <div className="mt-2">
+                  <button
+                    onClick={() => {
+                      setIsLoading(true);
+                      setFetchError(null);
+                      // retry
+                      (async () => {
+                        try {
+                          const [primary, secondary, teachersList, responsesList] = await Promise.all([
+                            dataService.getPrimaryQuestions(),
+                            dataService.getSecondaryQuestions(),
+                            dataService.getTeachers(),
+                            dataService.getResponses()
+                          ]);
+                          setPrimaryQuestions(primary);
+                          setSecondaryQuestions(secondary);
+                          setTeachers(teachersList);
+                          setResponses(responsesList);
+                        } catch (e) {
+                          setFetchError((e as Error)?.message || String(e));
+                        } finally {
+                          setIsLoading(false);
+                        }
+                      })();
+                    }}
+                    className="mt-2 px-3 py-1 bg-indigo-600 text-white rounded"
+                  >Reintentar</button>
+                </div>
+              </div>
+            )}
+
             {currentView === 'questions' && (
               <QuestionManager
                 primaryQuestions={primaryQuestions}
