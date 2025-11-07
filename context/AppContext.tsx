@@ -39,11 +39,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Initialize data on mount
   useEffect(() => {
-    dataService.initializeData();
-    setTeachers(dataService.getTeachers());
-    setPrimaryQuestions(dataService.getPrimaryQuestions());
-    setSecondaryQuestions(dataService.getSecondaryQuestions());
-    setAllResponses(dataService.getResponses());
+    const load = async () => {
+      try {
+        await dataService.initializeData();
+        const [t, pq, sq, resp] = await Promise.all([
+          dataService.getTeachers(),
+          dataService.getPrimaryQuestions(),
+          dataService.getSecondaryQuestions(),
+          dataService.getResponses(),
+        ]);
+
+        setTeachers(t as any || []);
+        setPrimaryQuestions(pq as any || []);
+        setSecondaryQuestions(sq as any || []);
+        setAllResponses(resp as any || []);
+      } catch (e) {
+        console.error('Error initializing app data:', e);
+        setError('Error inicializando datos');
+      }
+    };
+
+    load();
   }, []);
 
   // Load in-progress quiz when studentId changes

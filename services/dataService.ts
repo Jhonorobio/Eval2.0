@@ -1,5 +1,49 @@
 import { Teacher, Question, QuizResponse } from '../types';
 import { supabase } from './supabaseClient';
+import { INITIAL_TEACHERS, INITIAL_PRIMARY_QUESTIONS, INITIAL_SECONDARY_QUESTIONS } from '../data/initialData';
+
+// Initialize DB with initial data if tables are empty. This keeps backward
+// compatibility with previous behavior where initial data lived in localStorage.
+export const initializeData = async () => {
+  try {
+    // Seed teachers if table empty
+    const { data: teacherSample, error: teacherErr } = await supabase
+      .from('teachers')
+      .select('id')
+      .limit(1);
+    if (teacherErr) console.error('Error checking teachers table:', teacherErr);
+    if (!teacherSample || teacherSample.length === 0) {
+      const { error } = await supabase.from('teachers').upsert(INITIAL_TEACHERS);
+      if (error) console.error('Error seeding teachers:', error);
+    }
+
+    // Seed primary questions if none
+    const { data: primarySample, error: pErr } = await supabase
+      .from('questions')
+      .select('id')
+      .eq('type', 'primary')
+      .limit(1);
+    if (pErr) console.error('Error checking primary questions:', pErr);
+    if (!primarySample || primarySample.length === 0) {
+      const { error } = await supabase.from('questions').upsert(INITIAL_PRIMARY_QUESTIONS.map(q => ({ ...q, type: 'primary' })));
+      if (error) console.error('Error seeding primary questions:', error);
+    }
+
+    // Seed secondary questions if none
+    const { data: secondarySample, error: sErr } = await supabase
+      .from('questions')
+      .select('id')
+      .eq('type', 'secondary')
+      .limit(1);
+    if (sErr) console.error('Error checking secondary questions:', sErr);
+    if (!secondarySample || secondarySample.length === 0) {
+      const { error } = await supabase.from('questions').upsert(INITIAL_SECONDARY_QUESTIONS.map(q => ({ ...q, type: 'secondary' })));
+      if (error) console.error('Error seeding secondary questions:', error);
+    }
+  } catch (e) {
+    console.error('initializeData error:', e);
+  }
+};
 
 // --- Teachers ---
 export const getTeachers = async (): Promise<Teacher[]> => {
