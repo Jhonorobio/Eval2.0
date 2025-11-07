@@ -70,19 +70,40 @@ export const getTeachers = async (): Promise<Teacher[]> => {
 
 export const saveTeachers = async (teachers: Teacher[]) => {
   try {
-    // Only send the columns that actually exist in the DB table to avoid
-    // PostgREST errors for unknown columns. Current table columns: id, name, avatar
-    const payload = teachers.map(t => ({ id: t.id, name: t.name, avatar: t.avatar || '' }));
-    const { data, error } = await supabase
-      .from('teachers')
-      .upsert(payload, { onConflict: 'id' });
+    // First attempt: upsert full payload including subjects and grades_taught.
+    // This requires the table to have `subjects jsonb` and `grades_taught text[]`.
+    const fullPayload = teachers.map(t => ({
+      id: t.id,
+      name: t.name,
+      avatar: t.avatar || '',
+      subjects: t.subjects || [],
+      grades_taught: t.gradesTaught || []
+    }));
 
-    if (error) {
-      console.error('Error saving teachers:', error);
-      throw error;
+    const { data: fullData, error: fullError } = await supabase
+      .from('teachers')
+      .upsert(fullPayload, { onConflict: 'id' });
+
+    if (!fullError) {
+      return fullData;
     }
 
-    return data;
+    // If the error indicates unknown columns or schema mismatch, fall back
+    // to a minimal upsert (id, name, avatar). This keeps behavior safe for
+    // older schemas.
+    console.warn('Full upsert failed, falling back to minimal upsert:', fullError);
+
+    const minimalPayload = teachers.map(t => ({ id: t.id, name: t.name, avatar: t.avatar || '' }));
+    const { data: minData, error: minError } = await supabase
+      .from('teachers')
+      .upsert(minimalPayload, { onConflict: 'id' });
+
+    if (minError) {
+      console.error('Error saving teachers (minimal fallback):', minError);
+      throw minError;
+    }
+
+    return minData;
   } catch (e) {
     console.error('saveTeachers unexpected error:', e);
     throw e;
