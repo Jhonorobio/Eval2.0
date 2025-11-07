@@ -1,103 +1,152 @@
 import { Teacher, Question, QuizResponse } from '../types';
-import { INITIAL_TEACHERS, INITIAL_PRIMARY_QUESTIONS, INITIAL_SECONDARY_QUESTIONS } from '../data/initialData';
-
-const TEACHERS_KEY = 'evaluation_teachers';
-const PRIMARY_QUESTIONS_KEY = 'evaluation_primary_questions';
-const SECONDARY_QUESTIONS_KEY = 'evaluation_secondary_questions';
-const RESPONSES_KEY = 'evaluation_responses';
-
-// --- Initialization ---
-export const initializeData = () => {
-  // Para profesores, convertir datos antiguos al nuevo formato si existen
-  const existingTeachers = localStorage.getItem(TEACHERS_KEY);
-  if (existingTeachers) {
-    try {
-      const teachers = JSON.parse(existingTeachers);
-      // Verificar si los datos están en el formato antiguo (con subject en lugar de subjects)
-      if (teachers.length > 0 && 'subject' in teachers[0]) {
-        const updatedTeachers = teachers.map((t: any) => ({
-          ...t,
-          subjects: [{ id: `s${Date.now()}-${t.id}`, name: t.subject }],
-        }));
-        localStorage.setItem(TEACHERS_KEY, JSON.stringify(updatedTeachers));
-      }
-    } catch (e) {
-      console.error('Error parsing teachers data:', e);
-      localStorage.setItem(TEACHERS_KEY, JSON.stringify(INITIAL_TEACHERS));
-    }
-  } else {
-    localStorage.setItem(TEACHERS_KEY, JSON.stringify(INITIAL_TEACHERS));
-  }
-
-  if (!localStorage.getItem(PRIMARY_QUESTIONS_KEY)) {
-    localStorage.setItem(PRIMARY_QUESTIONS_KEY, JSON.stringify(INITIAL_PRIMARY_QUESTIONS));
-  }
-  if (!localStorage.getItem(SECONDARY_QUESTIONS_KEY)) {
-    localStorage.setItem(SECONDARY_QUESTIONS_KEY, JSON.stringify(INITIAL_SECONDARY_QUESTIONS));
-  }
-  if (!localStorage.getItem(RESPONSES_KEY)) {
-    localStorage.setItem(RESPONSES_KEY, JSON.stringify([]));
-  }
-};
+import { supabase } from './supabaseClient';
 
 // --- Teachers ---
-export const getTeachers = (): Teacher[] => {
-  const data = localStorage.getItem(TEACHERS_KEY);
-  return data ? JSON.parse(data) : [];
+export const getTeachers = async (): Promise<Teacher[]> => {
+  const { data, error } = await supabase
+    .from('teachers')
+    .select('*');
+  
+  if (error) {
+    console.error('Error fetching teachers:', error);
+    return [];
+  }
+  
+  return data || [];
 };
 
-export const saveTeachers = (teachers: Teacher[]) => {
-  localStorage.setItem(TEACHERS_KEY, JSON.stringify(teachers));
+export const saveTeachers = async (teachers: Teacher[]) => {
+  const { error } = await supabase
+    .from('teachers')
+    .upsert(teachers);
+    
+  if (error) {
+    console.error('Error saving teachers:', error);
+  }
 };
 
 // --- Questions ---
-export const getPrimaryQuestions = (): Question[] => {
-  const data = localStorage.getItem(PRIMARY_QUESTIONS_KEY);
-  return data ? JSON.parse(data) : [];
+export const getPrimaryQuestions = async (): Promise<Question[]> => {
+  const { data, error } = await supabase
+    .from('questions')
+    .select('*')
+    .eq('type', 'primary');
+  
+  if (error) {
+    console.error('Error fetching primary questions:', error);
+    return [];
+  }
+  
+  return data || [];
 };
 
-export const savePrimaryQuestions = (questions: Question[]) => {
-  localStorage.setItem(PRIMARY_QUESTIONS_KEY, JSON.stringify(questions));
+export const getSecondaryQuestions = async (): Promise<Question[]> => {
+  const { data, error } = await supabase
+    .from('questions')
+    .select('*')
+    .eq('type', 'secondary');
+  
+  if (error) {
+    console.error('Error fetching secondary questions:', error);
+    return [];
+  }
+  
+  return data || [];
 };
 
-export const getSecondaryQuestions = (): Question[] => {
-  const data = localStorage.getItem(SECONDARY_QUESTIONS_KEY);
-  return data ? JSON.parse(data) : [];
+export const savePrimaryQuestions = async (questions: Question[]) => {
+  const { error } = await supabase
+    .from('questions')
+    .upsert(questions.map(q => ({ ...q, type: 'primary' })));
+    
+  if (error) {
+    console.error('Error saving primary questions:', error);
+  }
 };
 
-export const saveSecondaryQuestions = (questions: Question[]) => {
-  localStorage.setItem(SECONDARY_QUESTIONS_KEY, JSON.stringify(questions));
+export const saveSecondaryQuestions = async (questions: Question[]) => {
+  const { error } = await supabase
+    .from('questions')
+    .upsert(questions.map(q => ({ ...q, type: 'secondary' })));
+    
+  if (error) {
+    console.error('Error saving secondary questions:', error);
+  }
 };
 
 // --- Responses ---
-export const getResponses = (): QuizResponse[] => {
-  const data = localStorage.getItem(RESPONSES_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-export const saveResponses = (responses: QuizResponse[]) => {
-  localStorage.setItem(RESPONSES_KEY, JSON.stringify(responses));
-}
-
-export const clearAllResponses = () => {
-  // Limpiar las respuestas
-  localStorage.setItem(RESPONSES_KEY, JSON.stringify([]));
+export const getResponses = async (): Promise<QuizResponse[]> => {
+  const { data, error } = await supabase
+    .from('quiz_answers')
+    .select('*')
+    .order('created_at', { ascending: false });
   
-  // Limpiar todos los datos relacionados con evaluaciones en progreso y completadas
-  const keysToRemove = [];
-  
-  // Buscar todas las claves en localStorage que estén relacionadas con evaluaciones
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && (
-      key.startsWith('inProgressQuiz_') || // Evaluaciones en progreso
-      key.startsWith('completedTeachers_') || // Registro de profesores evaluados
-      key.startsWith('student_') // Cualquier dato relacionado con estudiantes
-    )) {
-      keysToRemove.push(key);
-    }
+  if (error) {
+    console.error('Error fetching responses:', error);
+    return [];
   }
   
-  // Eliminar todas las claves encontradas
-  keysToRemove.forEach(key => localStorage.removeItem(key));
+  return data || [];
+};
+
+export const saveResponses = async (responses: QuizResponse[]) => {
+  const { error } = await supabase
+    .from('quiz_answers')
+    .upsert(responses);
+    
+  if (error) {
+    console.error('Error saving responses:', error);
+  }
+};
+
+export const clearAllResponses = async () => {
+  // Borrar todas las respuestas
+  const { error: answersError } = await supabase
+    .from('quiz_answers')
+    .delete()
+    .neq('id', 0);
+    
+  if (answersError) {
+    console.error('Error clearing responses:', answersError);
+    return;
+  }
+  
+  // Borrar todo el progreso de estudiantes
+  const { error: progressError } = await supabase
+    .from('student_progress')
+    .delete()
+    .neq('student_id', '');
+    
+  if (progressError) {
+    console.error('Error clearing student progress:', progressError);
+  }
+};
+
+// --- Student Progress ---
+export const getStudentProgress = async (studentId: string): Promise<string[]> => {
+  const { data, error } = await supabase
+    .from('student_progress')
+    .select('completed_evaluations')
+    .eq('student_id', studentId)
+    .single();
+  
+  if (error) {
+    console.error('Error fetching student progress:', error);
+    return [];
+  }
+  
+  return data?.completed_evaluations || [];
+};
+
+export const updateStudentProgress = async (studentId: string, completedEvaluations: string[]) => {
+  const { error } = await supabase
+    .from('student_progress')
+    .upsert({
+      student_id: studentId,
+      completed_evaluations: completedEvaluations
+    });
+    
+  if (error) {
+    console.error('Error updating student progress:', error);
+  }
 };
