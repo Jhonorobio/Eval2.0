@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getAvatar } from '../services/avatar';
 import { Teacher, Grade, Question, Answer, InProgressQuiz } from '../types';
 import { RatingSystem } from './RatingSystem';
 
@@ -60,7 +61,7 @@ export const QuizScreen: React.FC<QuizScreenProps> = ({ teacher, grade, studentI
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-100 p-4">
       <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl p-8 md:p-12 transform transition-all duration-500">
         <header className="text-center mb-8 border-b pb-4">
-          <img src={teacher.avatar} alt={teacher.name} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-indigo-200" />
+          <img src={getAvatar(teacher.avatar)} alt={teacher.name} className="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-indigo-200" />
           <h1 className="text-3xl font-bold text-slate-800">Cuestionario para {teacher.name}</h1>
           <div className="flex flex-wrap justify-center gap-2 mt-2">
             {teacher.subjects.map(subject => (

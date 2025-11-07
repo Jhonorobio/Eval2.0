@@ -1,4 +1,5 @@
 import React from 'react';
+import { getAvatar } from '../services/avatar';
 import { Teacher, Grade, QuizResponse, InProgressQuiz } from '../types';
 import { ChartBarIcon, CheckIcon } from './icons';
 import { PasswordDialog } from './PasswordDialog';
@@ -203,7 +204,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({
                           <CheckIcon className="w-8 h-8" />
                         </div>
                       )}
-                      <img src={item.teacherAvatar} alt={item.teacherName} className="w-20 h-20 rounded-full mb-3" />
+                          <img src={getAvatar(item.teacherAvatar)} alt={item.teacherName} className="w-20 h-20 rounded-full mb-3" />
                       <span className="font-semibold text-center">{item.teacherName}</span>
                       <span className="text-sm text-gray-600 px-3 py-1 bg-gray-100 rounded-full mt-2">
                         {item.subjectName}

@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { getAvatar } from '../services/avatar';
 import { Teacher, Grade, TeacherSubject } from '../types';
 import { GRADES } from '../constants';
 
@@ -151,9 +152,7 @@ export const TeacherManager: React.FC<TeacherManagerProps> = ({ teachers, onSave
           <div>
             <label className="block text-sm font-medium text-gray-700">Imagen del Profesor</label>
             <div className="mt-2 flex items-center gap-4">
-              {avatar && (
-                <img src={avatar} alt={name} className="w-20 h-20 rounded-full object-cover" />
-              )}
+              <img src={getAvatar(avatar)} alt={name} className="w-20 h-20 rounded-full object-cover" />
               <div className="flex-1">
                 <input
                   type="file"
@@ -250,7 +249,7 @@ export const TeacherManager: React.FC<TeacherManagerProps> = ({ teachers, onSave
         {editingTeachers.map(teacher => (
           <div key={teacher.id} className="bg-white p-6 rounded-lg shadow hover:shadow-md transition-shadow">
             <div className="flex items-center space-x-4">
-              <img src={teacher.avatar} alt={teacher.name} className="w-16 h-16 rounded-full" />
+              <img src={getAvatar(teacher.avatar)} alt={teacher.name} className="w-16 h-16 rounded-full" />
               <div>
                 <h3 className="text-lg font-semibold">{teacher.name}</h3>
                 <div className="flex flex-wrap gap-1">
