@@ -56,16 +56,36 @@ export const getTeachers = async (): Promise<Teacher[]> => {
     return [];
   }
   
-  return data || [];
+  // Map DB rows to the app's Teacher shape. The DB currently stores minimal fields
+  // (id, name, avatar). The frontend expects `subjects` and `gradesTaught` arrays,
+  // so provide sensible defaults to avoid runtime errors.
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    name: row.name,
+    avatar: row.avatar || '',
+    subjects: row.subjects || [],
+    gradesTaught: row.grades_taught || []
+  }));
 };
 
 export const saveTeachers = async (teachers: Teacher[]) => {
-  const { error } = await supabase
-    .from('teachers')
-    .upsert(teachers);
-    
-  if (error) {
-    console.error('Error saving teachers:', error);
+  try {
+    // Only send the columns that actually exist in the DB table to avoid
+    // PostgREST errors for unknown columns. Current table columns: id, name, avatar
+    const payload = teachers.map(t => ({ id: t.id, name: t.name, avatar: t.avatar || '' }));
+    const { data, error } = await supabase
+      .from('teachers')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      console.error('Error saving teachers:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (e) {
+    console.error('saveTeachers unexpected error:', e);
+    throw e;
   }
 };
 

@@ -54,7 +54,9 @@ export const AdminScreen: React.FC<{ onSave: () => void; onBackToHome: () => voi
   const handleSaveTeachers = async (updatedTeachers: Teacher[]) => {
     try {
       await dataService.saveTeachers(updatedTeachers);
-      setTeachers(updatedTeachers);
+      // Reload from DB to reflect actual stored rows (DB may not store nested fields)
+      const teachersList = await dataService.getTeachers();
+      setTeachers(teachersList);
     } catch (error) {
       console.error('Error guardando profesores:', error);
     }
