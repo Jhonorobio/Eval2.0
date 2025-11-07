@@ -169,6 +169,32 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ responses, teachers, o
 
   const selectedTeacher = teachers.find(t => t.id === selectedTeacherId);
 
+  const getDetailedTeacherStats = (teacherId: string, grade: string) => {
+    const teacherResponses = responses.filter(r => r.teacherId === teacherId && r.grade === grade);
+    const stats: { [subjectId: string]: { name: string, ratings: number[], studentCount: number } } = {};
+    
+    teacherResponses.forEach(response => {
+      if (!stats[response.subjectId]) {
+        stats[response.subjectId] = {
+          name: response.subjectName,
+          ratings: [],
+          studentCount: 0
+        };
+      }
+      
+      const avgRating = response.answers.reduce((sum, ans) => sum + ans.rating, 0) / response.answers.length;
+      stats[response.subjectId].ratings.push(avgRating);
+      stats[response.subjectId].studentCount++;
+    });
+
+    return Object.entries(stats).map(([subjectId, data]) => ({
+      subjectId,
+      subjectName: data.name,
+      averageRating: data.ratings.reduce((sum, r) => sum + r, 0) / data.ratings.length,
+      totalResponses: data.studentCount
+    }));
+  };
+
   const handleClearData = () => {
     if (window.confirm('¿Estás seguro de que quieres borrar todos los datos de evaluación? Esta acción no se puede deshacer.')) {
       dataService.clearAllResponses();
@@ -333,7 +359,14 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ responses, teachers, o
               className="w-full md:w-1/3 p-3 border-2 border-slate-200 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-slate-50"
             >
               <option value="">-- Selecciona un Profesor --</option>
-              {detailTeachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              {detailTeachers.map(t => {
+                const teacherStats = getDetailedTeacherStats(t.id, detailGrade);
+                return teacherStats.map(stat => (
+                  <option key={`${t.id}_${stat.subjectId}`} value={t.id}>
+                    {t.name} ({stat.subjectName})
+                  </option>
+                ));
+              })}
             </select>
           </div>
           <div className="mt-4">
