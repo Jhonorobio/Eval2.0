@@ -1,0 +1,5 @@
+{
+  "name": "Cuestionario de Evaluación Docente",
+  "description": "Una aplicación web para que los estudiantes evalúen a sus profesores a través de un cuestionario. Los resultados se visualizan como estadísticas y métricas para el análisis del desempeño docente.",
+  "requestFramePermissions": []
+}
