@@ -14,13 +14,33 @@ export const AdminScreen: React.FC<{ onSave: () => void; onBackToHome: () => voi
   const [primaryQuestions, setPrimaryQuestions] = useState<Question[]>([]);
   const [secondaryQuestions, setSecondaryQuestions] = useState<Question[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [responses, setResponses] = useState(dataService.getResponses());
+  const [responses, setResponses] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
-    setPrimaryQuestions(dataService.getPrimaryQuestions());
-    setSecondaryQuestions(dataService.getSecondaryQuestions());
-    setTeachers(dataService.getTeachers());
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [primary, secondary, teachersList, responsesList] = await Promise.all([
+          dataService.getPrimaryQuestions(),
+          dataService.getSecondaryQuestions(),
+          dataService.getTeachers(),
+          dataService.getResponses()
+        ]);
+        
+        setPrimaryQuestions(primary);
+        setSecondaryQuestions(secondary);
+        setTeachers(teachersList);
+        setResponses(responsesList);
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
   const handleSaveQuestions = () => {
@@ -29,9 +49,13 @@ export const AdminScreen: React.FC<{ onSave: () => void; onBackToHome: () => voi
     setSecondaryQuestions(dataService.getSecondaryQuestions());
   };
 
-  const handleSaveTeachers = (updatedTeachers: Teacher[]) => {
-    dataService.saveTeachers(updatedTeachers);
-    setTeachers(updatedTeachers);
+  const handleSaveTeachers = async (updatedTeachers: Teacher[]) => {
+    try {
+      await dataService.saveTeachers(updatedTeachers);
+      setTeachers(updatedTeachers);
+    } catch (error) {
+      console.error('Error guardando profesores:', error);
+    }
   };
 
   return (
@@ -83,27 +107,35 @@ export const AdminScreen: React.FC<{ onSave: () => void; onBackToHome: () => voi
         </div>
 
         {/* Content */}
-        {currentView === 'questions' && (
-          <QuestionManager
-            primaryQuestions={primaryQuestions}
-            secondaryQuestions={secondaryQuestions}
-            onSave={handleSaveQuestions}
-          />
-        )}
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-indigo-600 text-lg">Cargando datos...</div>
+          </div>
+        ) : (
+          <>
+            {currentView === 'questions' && (
+              <QuestionManager
+                primaryQuestions={primaryQuestions}
+                secondaryQuestions={secondaryQuestions}
+                onSave={handleSaveQuestions}
+              />
+            )}
 
-        {currentView === 'teachers' && (
-          <TeacherManager
-            teachers={teachers}
-            onSave={handleSaveTeachers}
-          />
-        )}
+            {currentView === 'teachers' && (
+              <TeacherManager
+                teachers={teachers}
+                onSave={handleSaveTeachers}
+              />
+            )}
 
-        {currentView === 'stats' && (
-          <StatsScreen
-            responses={responses}
-            teachers={teachers}
-            onBackToHome={() => setCurrentView('questions')}
-          />
+            {currentView === 'stats' && (
+              <StatsScreen
+                responses={responses}
+                teachers={teachers}
+                onBackToHome={() => setCurrentView('questions')}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
