@@ -12,6 +12,53 @@ interface StatsScreenProps {
   onBackToHome: () => void;
 }
 
+interface TeacherSubjectStats {
+  teacherId: string;
+  teacherName: string;
+  subjectId: string;
+  subjectName: string;
+  averageRating: number;
+  totalResponses: number;
+  responsesByGrade: { [key: string]: number };
+  studentIds: string[];
+}
+
+const calculateTeacherSubjectStats = (teachers: Teacher[], responses: QuizResponse[]): TeacherSubjectStats[] => {
+  const stats: { [key: string]: TeacherSubjectStats } = {};
+
+  responses.forEach(response => {
+    const teacher = teachers.find(t => t.id === response.teacherId);
+    if (!teacher) return;
+
+    const key = `${response.teacherId}_${response.subjectId}`;
+    if (!stats[key]) {
+      stats[key] = {
+        teacherId: response.teacherId,
+        teacherName: teacher.name,
+        subjectId: response.subjectId,
+        subjectName: response.subjectName,
+        averageRating: 0,
+        totalResponses: 0,
+        responsesByGrade: {},
+        studentIds: []
+      };
+    }
+
+    const responseAverage = response.answers.reduce((sum, ans) => sum + ans.rating, 0) / response.answers.length;
+    const currentTotal = stats[key].averageRating * stats[key].totalResponses;
+    stats[key].totalResponses++;
+    stats[key].averageRating = (currentTotal + responseAverage) / stats[key].totalResponses;
+
+    stats[key].responsesByGrade[response.grade] = (stats[key].responsesByGrade[response.grade] || 0) + 1;
+
+    if (!stats[key].studentIds.includes(response.studentId)) {
+      stats[key].studentIds.push(response.studentId);
+    }
+  });
+
+  return Object.values(stats);
+};
+
 const calculateTeacherGroupStats = (groupTeachers: Teacher[], allResponses: QuizResponse[]) => {
     return groupTeachers.map(teacher => {
       const teacherResponses = allResponses.filter(r => r.teacherId === teacher.id);
@@ -61,7 +108,9 @@ const renderDetailedRating = (response: QuizResponse, answer: Answer) => {
 export const StatsScreen: React.FC<StatsScreenProps> = ({ responses, teachers, onBackToHome }) => {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | 'all'>('all');
   const [detailGrade, setDetailGrade] = useState<Grade | ''>('');
-  const [detailTeacherId, setDetailTeacherId] = useState<string | ''>('');
+  const [detailTeacherId, setDetailTeacherId] = useState<string | ''>();
+
+  const teacherSubjectStats = useMemo(() => calculateTeacherSubjectStats(teachers, responses), [teachers, responses]);
   
   const primaryTeachers = useMemo(() => teachers.filter(t => t.gradesTaught.some(g => PRIMARY_GRADES.includes(g))), [teachers]);
   const secondaryTeachers = useMemo(() => teachers.filter(t => t.gradesTaught.some(g => SECONDARY_GRADES.includes(g))), [teachers]);
@@ -147,6 +196,46 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ responses, teachers, o
             </button>
           </div>
         </header>
+
+        <section className="bg-white p-6 rounded-2xl shadow-lg mb-8">
+          <h2 className="text-2xl font-semibold mb-4 text-slate-700">Estadísticas por Materia</h2>
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-auto">
+              <thead>
+                <tr className="bg-slate-50">
+                  <th className="px-4 py-2 text-left">Profesor</th>
+                  <th className="px-4 py-2 text-left">Materia</th>
+                  <th className="px-4 py-2 text-center">Calificación Promedio</th>
+                  <th className="px-4 py-2 text-center">Total Evaluaciones</th>
+                  <th className="px-4 py-2 text-center">Estudiantes Únicos</th>
+                  <th className="px-4 py-2 text-center">Distribución por Grado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teacherSubjectStats.map((stat) => (
+                  <tr key={`${stat.teacherId}_${stat.subjectId}`} className="border-t">
+                    <td className="px-4 py-2">{stat.teacherName}</td>
+                    <td className="px-4 py-2">{stat.subjectName}</td>
+                    <td className="px-4 py-2 text-center">
+                      {stat.averageRating.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2 text-center">{stat.totalResponses}</td>
+                    <td className="px-4 py-2 text-center">{stat.studentIds.length}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-wrap gap-2 justify-center">
+                        {Object.entries(stat.responsesByGrade).map(([grade, count]) => (
+                          <span key={grade} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            {grade}: {count}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         <section className="bg-white p-6 rounded-2xl shadow-lg mb-8">
           <h2 className="text-2xl font-semibold mb-4 text-slate-700">Calificación General (Primaria)</h2>

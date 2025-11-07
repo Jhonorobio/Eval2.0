@@ -29,7 +29,9 @@ export interface QuizResponse {
   studentId: string; // Now the student's name
   responseId: string; // Unique identifier for the response itself
   subjectId: string; // ID of the subject being evaluated
+  subjectName: string; // Name of the subject being evaluated
   answers: Answer[];
+  createdAt: string; // Timestamp of when the evaluation was made
 }
 
 // FIX: Add 'admin' to ViewState to allow navigation to the admin panel and resolve type errors.
