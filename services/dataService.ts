@@ -80,5 +80,24 @@ export const saveResponses = (responses: QuizResponse[]) => {
 }
 
 export const clearAllResponses = () => {
+  // Limpiar las respuestas
   localStorage.setItem(RESPONSES_KEY, JSON.stringify([]));
+  
+  // Limpiar todos los datos relacionados con evaluaciones en progreso y completadas
+  const keysToRemove = [];
+  
+  // Buscar todas las claves en localStorage que estén relacionadas con evaluaciones
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (
+      key.startsWith('inProgressQuiz_') || // Evaluaciones en progreso
+      key.startsWith('completedTeachers_') || // Registro de profesores evaluados
+      key.startsWith('student_') // Cualquier dato relacionado con estudiantes
+    )) {
+      keysToRemove.push(key);
+    }
+  }
+  
+  // Eliminar todas las claves encontradas
+  keysToRemove.forEach(key => localStorage.removeItem(key));
 };
